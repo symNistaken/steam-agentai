@@ -1,8 +1,11 @@
 # Steam AgentAI
 
+![STEAM AGENTAI — proje tanıtım görseli](docs/assets/banner.svg)
+
 [![Python checks](https://github.com/symNistaken/steam-agentai/actions/workflows/checks.yml/badge.svg)](https://github.com/symNistaken/steam-agentai/actions/workflows/checks.yml)
-[![Python 3.10](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![Haklar: Saklı](https://img.shields.io/badge/Haklar-T%C3%BCm%C3%BC%20sakl%C4%B1-red)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
+![Steam](https://img.shields.io/badge/Steam-Steam-242938?logo=steam&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Steam oyun kütüphanenden oyuncu profilini çıkar, AI destekli oyun önerileri al ve benzer oyuncuları keşfet.**
 
@@ -257,7 +260,7 @@ steam-agentai/
 ├── .github/workflows/       # GitHub Actions
 ├── .env.example             # Anahtarsız ortam şablonu
 ├── requirements.txt         # Sabitlenmiş bağımlılıklar
-└── LICENSE                  # Telif ve kullanım bildirimi
+└── LICENSE                  # MIT lisansı
 ```
 
 ## Veri ve gizlilik
@@ -335,10 +338,6 @@ Bu belgeler geçmiş geliştirme notlarını korur. Eski performans değerleri, 
 
 ## Lisans
 
-**Copyright (c) 2026 symNistaken. Tüm hakları saklıdır.**
+Bu proje **[MIT Lisansı](LICENSE)** ile yayımlanır. Ticari kullanım, değiştirme ve dağıtım serbesttir; telif bildirimi ve lisans metni korunmalıdır. Yazılım garanti olmadan sunulur.
 
-Bu proje açık kaynak kullanım lisansı ile sunulmamaktadır. Proje sahibinin önceden yazılı izni olmadan kodun kullanılması, kopyalanması, değiştirilmesi, dağıtılması, alt lisanslanması veya ticari amaçla değerlendirilmesi için izin verilmez; yürürlükteki hukuk ve GitHub hizmet koşullarından doğan haklar saklıdır.
-
-Deponun herkese açık olması genel kullanım veya yeniden dağıtım izni anlamına gelmez. GitHub hizmet koşullarının izin verdiği görüntüleme ve fork işlemleri bu bildirimle engellenmez. Kullanım izni için proje sahibiyle iletişime geçin.
-
-Tam bildirim için [LICENSE](LICENSE) dosyasına bakın. Üçüncü taraf paketlerin, modellerin, Steam varlıklarının ve API servislerinin kendi lisansları ve kullanım koşulları geçerlidir.
+Copyright (c) 2026 Berkay Seyman. Üçüncü taraf paketlerin, modellerin, Steam varlıklarının ve servislerin kendi lisansları ve koşulları ayrıca geçerlidir.

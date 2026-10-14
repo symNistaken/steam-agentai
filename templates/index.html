@@ -1301,6 +1301,14 @@
 
             // Analysis
             const analysis = data.analysis;
+            document.getElementById('analysisSourceNotice')?.remove();
+            if (analysis.source === 'fallback') {
+                const notice = document.createElement('p');
+                notice.id = 'analysisSourceNotice';
+                notice.setAttribute('role', 'status');
+                notice.textContent = 'AI servisine ulaşılamadı. Aşağıdaki öneriler yerel alternatif kurallarla oluşturuldu.';
+                document.getElementById('characterAnalysis').before(notice);
+            }
             document.getElementById('characterAnalysis').textContent = analysis.character || '-';
             document.getElementById('playstyleAnalysis').textContent = analysis.playstyle || '-';
             document.getElementById('strengthsAnalysis').textContent = analysis.strengths || '-';

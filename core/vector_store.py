@@ -279,8 +279,9 @@ class GameVectorIndex:
         """
         from core.embeddings import EmbeddingModel
         
-        self.vector_store = vector_store or VectorStore()
-        self.embedding_model = EmbeddingModel()
+        self.vector_store = vector_store if vector_store is not None else VectorStore()
+        from core.embeddings import get_embedding_model
+        self.embedding_model = get_embedding_model()
         self.is_initialized = False
     
     def build_index_from_games(self, games: List[Dict[str, Any]]) -> None:

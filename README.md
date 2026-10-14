@@ -67,7 +67,7 @@ flowchart TD
 | Alan | Teknoloji |
 | --- | --- |
 | Dil ve web | Python 3.10, Flask |
-| AI servisi | Groq SDK; mevcut model: `llama-3.3-70b-versatile` |
+| AI servisi | Groq SDK; mevcut model: `qwen/qwen3.8-27b` |
 | Steam erişimi | Steam Web API, requests, aiohttp |
 | Veri modelleri | Pydantic |
 | Embedding | SentenceTransformers, Transformers, PyTorch |
@@ -127,6 +127,7 @@ STEAM_API_KEY=YOUR_STEAM_API_KEY
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 FLASK_DEBUG=false
 FLASK_HOST=127.0.0.1
+LLM_MODEL=qwen/qwen3.8-27b
 ```
 
 Örnekteki anahtarlar yer tutucudur. Gerçek anahtarları `.env` içinde tut; issue, ekran görüntüsü veya commit içine koyma. Servislerin erişim kuralları ve kullanım kotaları ayrıca geçerlidir.
@@ -154,7 +155,7 @@ Tarayıcıda **[http://localhost:5000](http://localhost:5000)** adresini aç. Te
 3. Oyuncu bilgilerini, oynama sürelerini ve öneri gerekçelerini incele.
 4. Oyuncu eşleştirmesini kullanarak benzer kütüphanelere sahip oyuncuları ara.
 
-Groq çıktıları her istekte değişebilir. Öneri gerekçeleri, oyun adları ve mağaza eşleşmeleri kesin doğruluk garantisi taşımaz.
+Groq çıktıları her istekte değişebilir. AI servisi başarısız olursa sonuç `analysis.source=fallback` olarak işaretlenir ve arayüzde alternatif yöntem uyarısı gösterilir. Öneri gerekçeleri, oyun adları ve mağaza eşleşmeleri kesin doğruluk garantisi taşımaz.
 
 ## Yapılandırma
 
@@ -162,10 +163,10 @@ Groq çıktıları her istekte değişebilir. Öneri gerekçeleri, oyun adları 
 | --- | --- | --- |
 | `STEAM_API_KEY` | `.env` | Steam Web API anahtarı |
 | `GROQ_API_KEY` | `.env` | Groq anahtarı |
-| `FLASK_DEBUG` | `.env` | Örnek dosyada `false`; değişken verilmezse kod varsayılanı `true` |
+| `FLASK_DEBUG` | `.env` | Örnek dosyada `false`; değişken verilmezse kod varsayılanı `false` |
 | `FLASK_HOST` | `.env` | Varsayılan `127.0.0.1` |
 | `FLASK_PORT` | `config.py` | Sabit `5000`; `.env` üzerinden okunmaz |
-| `LLM_MODEL` | `config.py` | Groq model adı |
+| `LLM_MODEL` | `.env` / `config.py` | Groq model adı; varsayılan `qwen/qwen3.8-27b` |
 | `LLM_PROVIDER` | `config.py` | Mevcut ana servis Groq kullanır |
 | Embedding modeli | `core/embeddings.py` | Varsayılan `all-MiniLM-L6-v2` |
 
@@ -280,15 +281,17 @@ Python 3.10 ile, depo kökünde:
 
 ```bash
 python -m compileall -q app.py config.py init_app.py orchestrator.py agents core database schemas services tools
+python -m pip install -r requirements-test.txt
 python -m unittest discover -s tests -v
 ```
 
-Bu iki kontrol tam AI bağımlılık kurulumuna veya API anahtarına ihtiyaç duymaz. Sanal ortamı etkinleştirmediysen `python` yerine platformuna uygun `.venv` Python yolunu kullan.
+Kontroller `requirements-test.txt` paketlerini kullanır; API anahtarı gerekmez. Tam model paketleri yoksa hash embedding/NumPy alternatifleriyle çalışırlar. Yerel model paketleri kuruluysa modelin ilk yüklenmesi internet gerektirebilir; önceden indirilmiş model için `HF_HUB_OFFLINE=1` kullanılabilir. Sanal ortamı etkinleştirmediysen `python` yerine platformuna uygun `.venv` Python yolunu kullan.
 
 | Kontrol | Kapsam |
 | --- | --- |
 | Sözdizimi | Python kaynaklarının derlenebilmesi |
 | Veritabanı testi | Boş SQLite şeması, kalıcı kayıt, güncelleme ve tekil kullanıcı kaydı |
+| API ve RAG testleri | Geçersiz girdi, fallback ayrımı ve profil kütüphanelerinin birbirinden ayrılması |
 | Önbellek testi | Oynanmamış oyunların elenmesi, en fazla 50 oyun ve süreye göre sıralama |
 
 [GitHub Actions](https://github.com/symNistaken/steam-agentai/actions) bu kontrolleri push ve pull request olaylarında çalıştırır. Başarılı CI, canlı API entegrasyonu, bağımlılıkların tüm platformlarda kurulması veya model yükleme testi anlamına gelmez.
@@ -313,7 +316,7 @@ SentenceTransformers paketi bulunmadığında kod yerel hashing embedding altern
 - Yerel geliştirme uygulamasıdır; üretim dağıtımı ve uçtan uca doğrulama tamamlanmış kabul edilmez.
 - API kimlik doğrulaması ve istek sınırı eklenmeden internete açılmamalıdır. Üretim için uygun WSGI sunucusu ve HTTPS gerekir.
 - Groq modeli ve sabit paket sürümleri zamanla güncelleme gerektirebilir.
-- RAG indeksi boşken mevcut uç nokta oyuncunun ilk 50 oyunundan başlangıç indeksi oluşturur; tüm Steam kataloğu hazır değildir.
+- RAG uç noktası her istek için ayrı indeks oluşturur ve oyuncunun ilk 50 oyununu kullanır; tüm Steam kataloğu hazır değildir.
 - Oyun adı benzerliği gerçek oynanış benzerliğinin garantisi değildir.
 - XAI uç noktası bazı oyun özelliklerini varsayılan değerlerle oluşturur; açıklamalar doğrulanmış nedensel model açıklaması değildir.
 
@@ -341,3 +344,7 @@ Bu belgeler geçmiş geliştirme notlarını korur. Eski performans değerleri, 
 Bu proje **[MIT Lisansı](LICENSE)** ile yayımlanır. Ticari kullanım, değiştirme ve dağıtım serbesttir; telif bildirimi ve lisans metni korunmalıdır. Yazılım garanti olmadan sunulur.
 
 Copyright (c) 2026 Berkay Seyman. Üçüncü taraf paketlerin, modellerin, Steam varlıklarının ve servislerin kendi lisansları ve koşulları ayrıca geçerlidir.
+
+## Son doğrulama
+
+14 Ekim 2026 tarihinde gerçek Steam API, Groq öneri çağrısı, SentenceTransformer/FAISS yüklemesi, embedding benzerliği ve açıklama uç noktası çalıştırıldı. Deneme profilinin kütüphanesi gizli olduğundan canlı RAG isteği beklenen `400` sonucunu verdi; RAG indeksleme ve profil ayrımı örnek kütüphanelerle otomatik test edildi. CI canlı API çağrısı yapmaz. Bu kontrol farklı hesap, kota ve gelecekteki model erişimi için garanti değildir.

@@ -48,7 +48,7 @@ class AgenticRecommendationService:
     def __init__(self):
         self.steam_tool = SteamAPITool()
         self.store_tool = StoreMetadataTool()
-        self.llm_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+        self.llm_client = Groq(api_key=GROQ_API_KEY, timeout=30, max_retries=1) if GROQ_API_KEY else None
         logger.info(f"🔑 GROQ_API_KEY loaded: {bool(GROQ_API_KEY)}")
         logger.info(f"🔑 LLM Client initialized: {bool(self.llm_client)}")
         
@@ -144,7 +144,7 @@ class AgenticRecommendationService:
             
         except Exception as e:
             logger.error(f"❌ Analysis error: {e}")
-            result["error"] = str(e)
+            result["error"] = "Analiz tamamlanamadı. Servis bağlantısını kontrol edin."
         
         return result
     
@@ -246,17 +246,18 @@ Toplam Saat: {sum(g.get('playtime_forever', 0) for g in games) // 60} saat
         
         try:
             print(f"📡 Calling Groq API with model: {LLM_MODEL}")
-            response = self.llm_client.chat.completions.create(
+            response = await asyncio.to_thread(self.llm_client.chat.completions.create,
                 messages=[{"role": "user", "content": prompt}],
                 model=LLM_MODEL,
                 temperature=0.7,
-                max_tokens=1500,
+                max_tokens=4096,
+                response_format={"type": "json_object"},
             )
             print(f"✅ Groq API response received")
             
             text = response.choices[0].message.content
             print(f"📝 Response text length: {len(text)}")
-            return self._parse_llm_response(text)
+            return self._parse_llm_response(text, games)
             
         except Exception as e:
             import traceback
@@ -265,41 +266,38 @@ Toplam Saat: {sum(g.get('playtime_forever', 0) for g in games) // 60} saat
             logger.error(f"Traceback: {traceback.format_exc()}")
             return self._fallback_analysis(games)
     
-    def _parse_llm_response(self, text: str) -> Dict[str, Any]:
-        """Parse LLM JSON response."""
+    def _parse_llm_response(self, text: str, games=None) -> Dict[str, Any]:
+        """Accept structured recommendations; explicitly mark local fallback output."""
         try:
-            start = text.find('{')
-            end = text.rfind('}') + 1
-            
-            if start != -1 and end > start:
-                json_str = text[start:end]
-                data = json.loads(json_str)
-                
-                # Process recommendations - add images and store URLs
-                recommendations = []
-                for rec in data.get("recommendations", []):
-                    appid = rec.get("appid", 0)
-                    recommendations.append({
-                        "name": rec.get("name", ""),
-                        "reason": rec.get("reason", ""),
-                        "appid": appid,
-                        "image": f"https://cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg" if appid else "",
-                        "store_url": f"https://store.steampowered.com/app/{appid}/" if appid else "#",
-                    })
-                
-                return {
-                    "character": data.get("character", "-"),
-                    "playstyle": data.get("playstyle", "-"),
-                    "strengths": data.get("strengths", "-"),
-                    "weaknesses": data.get("weaknesses", "-"),
-                    "recommendations": recommendations,
-                }
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON parse error: {e}")
-        
-        return self._fallback_analysis()
-    
+            text = text or ''
+            start, end = text.find('{'), text.rfind('}') + 1
+            data = json.loads(text[start:end])
+            if not isinstance(data, dict) or not isinstance(data.get('recommendations'), list):
+                raise ValueError('Invalid recommendation response')
+            recommendations = []
+            owned = {game.get('appid') for game in (games or [])}
+            for recommendation in data['recommendations']:
+                if not isinstance(recommendation, dict):
+                    continue
+                appid = recommendation.get('appid')
+                if isinstance(appid, bool) or not isinstance(appid, int) or appid <= 0 or appid in owned:
+                    continue
+                if not all(isinstance(recommendation.get(key), str) and recommendation[key].strip() for key in ('name', 'reason')):
+                    continue
+                recommendations.append({
+                    'name': recommendation['name'], 'reason': recommendation['reason'], 'appid': appid,
+                    'image': f'https://cdn.akamai.steamstatic.com/steam/apps/{appid}/header.jpg',
+                    'store_url': f'https://store.steampowered.com/app/{appid}/',
+                })
+            if not recommendations:
+                raise ValueError('No valid recommendations')
+            return dict(source='groq', recommendations=recommendations,
+                        **{key: data.get(key, '-') if isinstance(data.get(key, '-'), str) else '-'
+                           for key in ('character', 'playstyle', 'strengths', 'weaknesses')})
+        except (ValueError, TypeError):
+            logger.warning('LLM response invalid; returning explicitly marked local fallback')
+            return self._fallback_analysis(games)
+
     def _fallback_analysis(self, games: Optional[List[Dict]] = None) -> Dict[str, Any]:
         """Fallback analysis when LLM fails."""
         games = games or []
@@ -349,6 +347,7 @@ Toplam Saat: {sum(g.get('playtime_forever', 0) for g in games) // 60} saat
             playstyle = "Profil verisi sınırlı olduğu için genel Steam tercihleri üzerinden öneri üretildi."
 
         return {
+            "source": "fallback",
             "character": f"Profil analizi temel Steam verileriyle hazırlandı. Toplam yaklaşık {total_hours} saatlik oyun geçmişi dikkate alındı.",
             "playstyle": playstyle,
             "strengths": "Oyun geçmişinden oynama süresi ve kütüphane yoğunluğu okunabiliyor.",
@@ -384,11 +383,5 @@ def get_recommendation_service() -> AgenticRecommendationService:
 
 
 def run_async(coro):
-    """Helper to run async code from sync context."""
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    
-    return loop.run_until_complete(coro)
+    """Each synchronous Flask request owns and closes its event loop."""
+    return asyncio.run(coro)

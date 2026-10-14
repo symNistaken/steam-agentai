@@ -49,10 +49,11 @@ class RAGRetriever:
             vector_index: Pre-initialized GameVectorIndex or None to create
         """
         from core.vector_store import get_vector_store
+        from core.embeddings import get_embedding_model
         
-        self.vector_store = get_vector_store()
+        self.vector_store = vector_index.vector_store if vector_index is not None else get_vector_store()
         self.vector_index = vector_index
-        self.embedding_model = EmbeddingModel()
+        self.embedding_model = vector_index.embedding_model if vector_index is not None else get_embedding_model()
     
     def retrieve_similar_to_favorites(
         self,

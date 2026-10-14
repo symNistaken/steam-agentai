@@ -1,8 +1,10 @@
 """Steam User Analysis and Game Recommendation System - Agentic AI Architecture"""
 import json
 import uuid
+import math
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, abort
+from werkzeug.exceptions import HTTPException
 from config import FLASK_DEBUG, FLASK_HOST, FLASK_PORT
 from services.steam_service import SteamService
 from services.ai_agent import AIAgent
@@ -26,7 +28,22 @@ app.config['JSON_AS_ASCII'] = False
 
 def get_json_payload():
     """Read request JSON safely for local API endpoints."""
-    return request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        abort(400)
+    return payload
+
+
+def get_input_text(data, key):
+    value = data.get(key, '')
+    if not isinstance(value, str):
+        abort(400)
+    return value.strip()
+
+
+@app.errorhandler(400)
+def invalid_input(error):
+    return jsonify(success=False, error='Geçersiz JSON veya alan türü.'), 400
 
 
 def api_error(message: str = "İşlem sırasında bir hata oluştu", status_code: int = 500):
@@ -202,6 +219,8 @@ def search_game_id(game_name: str):
                         return appid
                 
                 return None
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"  ⚠️ Steam API error: {game_name}")
         return None
@@ -229,7 +248,7 @@ def analyze():
     """
     try:
         data = get_json_payload()
-        steam_input = data.get('steam_input', '').strip()
+        steam_input = get_input_text(data, 'steam_input')
         use_agentic = data.get('use_agentic', True)  # Default to new system
         
         if not steam_input:
@@ -371,6 +390,8 @@ def analyze():
         print(f"✅ Analysis successful\n")
         return jsonify(response), 200
     
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Error: {e}\n")
         return api_error()
@@ -391,7 +412,7 @@ def agentic_recommend():
     """
     try:
         data = get_json_payload()
-        steam_input = data.get('steam_id', '').strip()
+        steam_input = get_input_text(data, 'steam_id')
         
         if not steam_input:
             return jsonify({'success': False, 'error': 'Steam ID gerekli'}), 400
@@ -413,6 +434,8 @@ def agentic_recommend():
         
         return jsonify(result), 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Agentic Error: {e}")
         return api_error()
@@ -463,7 +486,7 @@ def find_matches():
     """
     try:
         data = get_json_payload()
-        steam_input = data.get('steam_id', '').strip()
+        steam_input = get_input_text(data, 'steam_id')
         
         if not steam_input:
             return jsonify({'success': False, 'error': 'Steam ID gerekli'}), 400
@@ -515,6 +538,8 @@ def find_matches():
             'message': result.data.get('message', 'Tamamlandı')
         }), 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Matchmaking Error: {e}")
         import traceback
@@ -541,7 +566,7 @@ def get_rag_context():
     """
     try:
         data = get_json_payload()
-        steam_input = data.get('steam_id', '').strip()
+        steam_input = get_input_text(data, 'steam_id')
         max_context = clamp_int(data.get('max_context', 15), default=15, minimum=1, maximum=50)
         
         if not steam_input:
@@ -557,7 +582,8 @@ def get_rag_context():
         from services.rag_service import RAGService
         from services.steam_service import SteamService as SS
         
-        rag_service = RAGService()
+        from core.vector_store import GameVectorIndex, VectorStore
+        rag_service = RAGService(vector_index=GameVectorIndex(vector_store=VectorStore()))
         steam_service = SS()
         
         # Fetch player data
@@ -608,6 +634,8 @@ def get_rag_context():
             'total_retrieved': len(context_games)
         }), 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ RAG Context Error: {e}")
         import traceback
@@ -631,9 +659,14 @@ def get_xai_explanation():
     """
     try:
         data = get_json_payload()
-        steam_input = data.get('steam_id', '').strip()
-        game_name = data.get('game_name', '').strip()
-        rec_score = float(data.get('recommendation_score', 0.7))
+        steam_input = get_input_text(data, 'steam_id')
+        game_name = get_input_text(data, 'game_name')
+        try:
+            rec_score = float(data.get('recommendation_score', 0.7))
+        except (TypeError, ValueError):
+            abort(400)
+        if not math.isfinite(rec_score) or not 0 <= rec_score <= 1:
+            abort(400)
         
         if not steam_input or not game_name:
             return jsonify({'success': False, 'error': 'Steam ID ve oyun adı gerekli'}), 400
@@ -701,6 +734,8 @@ def get_xai_explanation():
             'feature_breakdown': explanation.get('feature_breakdown', {})
         }), 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ XAI Explanation Error: {e}")
         import traceback
@@ -721,8 +756,8 @@ def get_embeddings_similarity():
     """
     try:
         data = get_json_payload()
-        game1_name = data.get('game1_name', '').strip()
-        game2_name = data.get('game2_name', '').strip()
+        game1_name = get_input_text(data, 'game1_name')
+        game2_name = get_input_text(data, 'game2_name')
         
         if not game1_name or not game2_name:
             return jsonify({'success': False, 'error': 'İki oyun adı gerekli'}), 400
@@ -731,7 +766,8 @@ def get_embeddings_similarity():
         
         from core.embeddings import EmbeddingModel
         
-        embedding_model = EmbeddingModel()
+        from core.embeddings import get_embedding_model
+        embedding_model = get_embedding_model()
         similarity = embedding_model.calculate_similarity(game1_name, game2_name)
         
         print(f"✓ Similarity: {similarity:.3f}")
@@ -748,6 +784,8 @@ def get_embeddings_similarity():
             )
         }), 200
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Embeddings Similarity Error: {e}")
         import traceback

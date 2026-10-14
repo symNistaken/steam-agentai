@@ -12,6 +12,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+      - name: Install dependencies
+        run: python -m pip install -r requirements-test.txt
       - name: Check Python syntax
         run: python -m compileall -q app.py config.py init_app.py orchestrator.py agents core database schemas services tools
       - name: Check database creation and persistence

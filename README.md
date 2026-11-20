@@ -1,102 +1,102 @@
 # Steam AgentAI
 
-![STEAM AGENTAI — proje tanıtım görseli](docs/assets/banner.svg)
+![STEAM AGENTAI — project banner](docs/assets/banner.svg)
 
 [![Python checks](https://github.com/symNistaken/steam-agentai/actions/workflows/checks.yml/badge.svg)](https://github.com/symNistaken/steam-agentai/actions/workflows/checks.yml)
 [![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 ![Steam](https://img.shields.io/badge/Steam-Steam-242938?logo=steam&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Steam oyun kütüphanenden oyuncu profilini çıkar, AI destekli oyun önerileri al ve benzer oyuncuları keşfet.**
+**Build a player profile from your Steam library, get AI-powered game recommendations and discover similar players.**
 
-Steam AgentAI; Steam Web API verilerini, Groq üzerinden dil modeli analizini ve Python/Flask tabanlı bir web arayüzünü bir araya getirir. Projede ayrıca çoklu ajan altyapısı, embedding tabanlı benzerlik, RAG bağlamı ve öneri açıklama bileşenleri bulunur.
+Steam AgentAI combines Steam Web API data, language model analysis through Groq and a Python/Flask web interface. The project also includes a multi-agent infrastructure, embedding-based similarity, RAG context and recommendation explanation components.
 
-> Bu proje Valve, Steam veya Groq tarafından geliştirilmiş ya da onaylanmış değildir. Steam ve ilgili markalar sahiplerine aittir.
+> This project is not developed or endorsed by Valve, Steam or Groq. Steam and related trademarks belong to their respective owners.
 
-## İçindekiler
+## Contents
 
-- [Özellikler](#özellikler)
-- [Nasıl çalışır?](#nasıl-çalışır)
-- [Teknolojiler](#teknolojiler)
-- [Kurulum](#kurulum)
-- [Kullanım](#kullanım)
-- [Yapılandırma](#yapılandırma)
-- [API rehberi](#api-rehberi)
-- [Proje yapısı](#proje-yapısı)
-- [Veri ve gizlilik](#veri-ve-gizlilik)
-- [Testler](#testler)
-- [Sorun giderme](#sorun-giderme)
-- [Mevcut sınırlar](#mevcut-sınırlar)
-- [Katkıda bulunma](#katkıda-bulunma)
-- [Lisans](#lisans)
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Tech stack](#tech-stack)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [API guide](#api-guide)
+- [Project structure](#project-structure)
+- [Data and privacy](#data-and-privacy)
+- [Tests](#tests)
+- [Troubleshooting](#troubleshooting)
+- [Current limitations](#current-limitations)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Özellikler
+## Features
 
-| Bileşen | İşlev |
+| Component | What it does |
 | --- | --- |
-| Profil analizi | Steam profilini, kütüphaneyi ve oynama sürelerini işler. |
-| AI önerileri | Oyuncu verilerinden Groq ile oyun önerileri ve gerekçeler üretir. |
-| Web arayüzü | Türkçe arayüzde profil, kütüphane ve öneri sonuçlarını gösterir. |
-| Matchmaking | Önbellekteki oyuncuları ve arkadaş ağı keşfini kullanarak uyumlu oyuncular arar. |
-| Semantik benzerlik | Oyun metinlerini embedding vektörlerine dönüştürerek karşılaştırır. |
-| RAG bağlamı | Benzer oyunları vektör indeksinden getirerek bağlam oluşturur. |
-| Öneri açıklaması | Tür, oyun tarzı, zorluk ve süre gibi özelliklere dayalı açıklamalar üretir. |
-| Ajan altyapısı | Profil, retrieval, ranker ve matchmaking ajanları ile koordinasyon kodunu içerir. |
+| Profile analysis | Processes the Steam profile, library and playtime. |
+| AI recommendations | Generates game recommendations and reasons from player data with Groq. |
+| Web interface | Shows profile, library and recommendation results in a Turkish-language interface. |
+| Matchmaking | Searches for compatible players using cached players and friend network discovery. |
+| Semantic similarity | Compares games by converting their text into embedding vectors. |
+| RAG context | Builds context by retrieving similar games from a vector index. |
+| Recommendation explanation | Produces explanations based on features such as genre, play style, difficulty and length. |
+| Agent infrastructure | Includes profile, retrieval, ranker and matchmaking agents plus coordination code. |
 
-## Nasıl çalışır?
+## How it works
 
-Ana profil analizi akışı:
+Main profile analysis flow:
 
 ```mermaid
 flowchart TD
-    A[Web arayüzü veya API istemcisi] --> B[Flask API]
-    B --> C[Steam ID veya profil adresi çözümleme]
-    C --> D[Steam profil ve kütüphane verileri]
-    D --> E[Öneri servisi]
-    E --> F[Groq ile oyuncu analizi]
-    F --> G[JSON sonuç ve web arayüzü]
-    B --> H[Matchmaking ajanı]
-    H --> I[SQLite önbelleği ve arkadaş ağı keşfi]
-    B --> J[RAG, embedding ve açıklama uç noktaları]
+    A[Web interface or API client] --> B[Flask API]
+    B --> C[Resolve Steam ID or profile URL]
+    C --> D[Steam profile and library data]
+    D --> E[Recommendation service]
+    E --> F[Player analysis with Groq]
+    F --> G[JSON result and web interface]
+    B --> H[Matchmaking agent]
+    H --> I[SQLite cache and friend network discovery]
+    B --> J[RAG, embedding and explanation endpoints]
 ```
 
-`/api/analyze` ve `/api/agentic/recommend`, mevcut sürümde `AgenticRecommendationService.analyze_profile()` üzerinden çalışır. Dört ajan başlangıçta kaydedilir; ancak bu iki uç nokta her istekte tam `Orchestrator` zincirini yürütmez. Matchmaking kendi ajanını çalıştırır; RAG ve açıklama özellikleri ayrı uç noktalarda da kullanılabilir.
+In the current version, `/api/analyze` and `/api/agentic/recommend` run through `AgenticRecommendationService.analyze_profile()`. Four agents are registered at startup, but these two endpoints do not run the full `Orchestrator` chain on every request. Matchmaking runs its own agent; RAG and explanation features are also available through separate endpoints.
 
-## Teknolojiler
+## Tech stack
 
-| Alan | Teknoloji |
+| Area | Technology |
 | --- | --- |
-| Dil ve web | Python 3.10, Flask |
-| AI servisi | Groq SDK; mevcut model: `qwen/qwen3.8-27b` |
-| Steam erişimi | Steam Web API, requests, aiohttp |
-| Veri modelleri | Pydantic |
+| Language and web | Python 3.10, Flask |
+| AI service | Groq SDK; current model: `qwen/qwen3.8-27b` |
+| Steam access | Steam Web API, requests, aiohttp |
+| Data models | Pydantic |
 | Embedding | SentenceTransformers, Transformers, PyTorch |
-| Vektör arama | FAISS; paket yoksa NumPy tabanlı alternatif |
-| Saklama | SQLite ve dosya tabanlı saklama bileşenleri |
-| Arayüz | HTML, CSS ve JavaScript |
-| Otomatik kontrol | GitHub Actions, compileall, unittest |
+| Vector search | FAISS; NumPy-based fallback if the package is missing |
+| Storage | SQLite and file-based storage components |
+| Interface | HTML, CSS and JavaScript |
+| Automated checks | GitHub Actions, compileall, unittest |
 
-Paket sürümleri [requirements.txt](requirements.txt) içinde sabitlenmiştir. Bu dosyada LangChain, Redis, LIME ve SHAP da bulunur; ana uygulama kodu bunların tamamını aktif olarak kullanmaz. Açıklama bileşeni şu an özellik tabanlı hesaplamalar yapar; gerçek LIME/SHAP analizi olarak yorumlanmamalıdır.
+Package versions are pinned in [requirements.txt](requirements.txt). That file also lists LangChain, Redis, LIME and SHAP; the main application code does not actively use all of them. The explanation component currently does feature-based calculations and should not be read as a real LIME/SHAP analysis.
 
-## Kurulum
+## Installation
 
-### Gereksinimler
+### Requirements
 
-- Python **3.10** ve Git.
-- Steam Web API anahtarı.
-- Groq API anahtarı ve yapılandırılmış modele erişim.
-- Paket kurulumu, Steam/Groq istekleri ve ilk model indirmesi için internet bağlantısı.
+- Python **3.10** and Git.
+- A Steam Web API key.
+- A Groq API key with access to the configured model.
+- An internet connection for package installation, Steam/Groq requests and the first model download.
 
-GPU zorunlu değildir. Embedding modeli yüklenirken indirme, disk alanı ve bellek gerekir; süre kullanılan sisteme bağlıdır.
+A GPU is not required. Loading the embedding model needs a download, disk space and memory; how long it takes depends on your system.
 
-### 1. Depoyu klonla
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/symNistaken/steam-agentai.git
 cd steam-agentai
 ```
 
-### 2. Sanal ortam ve paketler
+### 2. Virtual environment and packages
 
 **Windows PowerShell:**
 
@@ -107,7 +107,7 @@ py -3.10 -m venv .venv
 Copy-Item .env.example .env
 ```
 
-Bu komutlar sanal ortamı etkinleştirmeden çalışır; PowerShell script yürütme ayarını değiştirmen gerekmez.
+These commands work without activating the virtual environment, so you don't need to change the PowerShell script execution policy.
 
 **Linux/macOS:**
 
@@ -118,9 +118,9 @@ python3.10 -m venv .venv
 cp .env.example .env
 ```
 
-### 3. API anahtarları
+### 3. API keys
 
-[Steam Web API](https://steamcommunity.com/dev/apikey) ve [Groq Console](https://console.groq.com/keys) üzerinden kendi anahtarlarını al. `.env` dosyasını düzenle:
+Get your own keys from [Steam Web API](https://steamcommunity.com/dev/apikey) and [Groq Console](https://console.groq.com/keys). Edit the `.env` file:
 
 ```dotenv
 STEAM_API_KEY=YOUR_STEAM_API_KEY
@@ -130,9 +130,9 @@ FLASK_HOST=127.0.0.1
 LLM_MODEL=qwen/qwen3.8-27b
 ```
 
-Örnekteki anahtarlar yer tutucudur. Gerçek anahtarları `.env` içinde tut; issue, ekran görüntüsü veya commit içine koyma. Servislerin erişim kuralları ve kullanım kotaları ayrıca geçerlidir.
+The keys in the example are placeholders. Keep real keys in `.env`; never put them in issues, screenshots or commits. Each service's access rules and usage quotas also apply.
 
-### 4. Başlat
+### 4. Start
 
 Windows:
 
@@ -146,75 +146,75 @@ Linux/macOS:
 .venv/bin/python app.py
 ```
 
-Tarayıcıda **[http://localhost:5000](http://localhost:5000)** adresini aç. Terminali açık tut; sunucuyu durdurmak için `Ctrl+C` kullan.
+Open **[http://localhost:5000](http://localhost:5000)** in your browser. Keep the terminal open; press `Ctrl+C` to stop the server.
 
-## Kullanım
+## Usage
 
-1. Web arayüzüne Steam ID64, Steam profil URL'si veya çözümlenebilen özel profil adını gir.
-2. Analizi başlat. Profil ve kütüphane görünürlüğü Steam'den alınabilecek verileri belirler.
-3. Oyuncu bilgilerini, oynama sürelerini ve öneri gerekçelerini incele.
-4. Oyuncu eşleştirmesini kullanarak benzer kütüphanelere sahip oyuncuları ara.
+1. Enter a Steam ID64, a Steam profile URL or a resolvable custom profile name in the web interface.
+2. Start the analysis. Profile and library visibility determine what data can be fetched from Steam.
+3. Review the player info, playtime and recommendation reasons.
+4. Use matchmaking to search for players with similar libraries.
 
-Groq çıktıları her istekte değişebilir. AI servisi başarısız olursa sonuç `analysis.source=fallback` olarak işaretlenir ve arayüzde alternatif yöntem uyarısı gösterilir. Öneri gerekçeleri, oyun adları ve mağaza eşleşmeleri kesin doğruluk garantisi taşımaz.
+Groq output can vary between requests. If the AI service fails, the result is marked `analysis.source=fallback` and the interface shows a fallback-method warning. Recommendation reasons, game names and store matches are not guaranteed to be accurate.
 
-## Yapılandırma
+## Configuration
 
-| Ayar | Konum | Davranış |
+| Setting | Location | Behavior |
 | --- | --- | --- |
-| `STEAM_API_KEY` | `.env` | Steam Web API anahtarı |
-| `GROQ_API_KEY` | `.env` | Groq anahtarı |
-| `FLASK_DEBUG` | `.env` | Örnek dosyada `false`; değişken verilmezse kod varsayılanı `false` |
-| `FLASK_HOST` | `.env` | Varsayılan `127.0.0.1` |
-| `FLASK_PORT` | `config.py` | Sabit `5000`; `.env` üzerinden okunmaz |
-| `LLM_MODEL` | `.env` / `config.py` | Groq model adı; varsayılan `qwen/qwen3.8-27b` |
-| `LLM_PROVIDER` | `config.py` | Mevcut ana servis Groq kullanır |
-| Embedding modeli | `core/embeddings.py` | Varsayılan `all-MiniLM-L6-v2` |
+| `STEAM_API_KEY` | `.env` | Steam Web API key |
+| `GROQ_API_KEY` | `.env` | Groq key |
+| `FLASK_DEBUG` | `.env` | `false` in the example file; the code default is `false` if unset |
+| `FLASK_HOST` | `.env` | Default `127.0.0.1` |
+| `FLASK_PORT` | `config.py` | Fixed at `5000`; not read from `.env` |
+| `LLM_MODEL` | `.env` / `config.py` | Groq model name; default `qwen/qwen3.8-27b` |
+| `LLM_PROVIDER` | `config.py` | The current main service uses Groq |
+| Embedding model | `core/embeddings.py` | Default `all-MiniLM-L6-v2` |
 
-`config.py` içinde Ollama ayarları da vardır; ana öneri servisinde tamamlanmış bir sağlayıcı geçişi bulunmadığından yalnızca `LLM_PROVIDER` değerini değiştirmek yeterli değildir.
+`config.py` also contains Ollama settings, but the main recommendation service has no completed provider switch, so changing `LLM_PROVIDER` alone is not enough.
 
-## API rehberi
+## API guide
 
-Temel adres: `http://localhost:5000`. POST isteklerinde `Content-Type: application/json` kullan.
+Base URL: `http://localhost:5000`. Use `Content-Type: application/json` for POST requests.
 
-| Yol | Yöntem | Gövde alanları | İşlev |
+| Path | Method | Body fields | What it does |
 | --- | --- | --- | --- |
-| `/` | GET | — | Web arayüzü |
-| `/api/analyze` | POST | `steam_input`, isteğe bağlı `use_agentic` | Profil ve kütüphane analizi |
-| `/api/agentic/recommend` | POST | `steam_id` | Öneri servisi |
-| `/api/health` | GET | — | Ajan, araç ve veritabanı durumu |
-| `/api/db/stats` | GET | — | Önbellek istatistikleri |
-| `/api/matchmaking` | POST | `steam_id` | Oyuncu eşleştirme |
-| `/api/rag/context` | POST | `steam_id`, isteğe bağlı `max_context` | Benzer oyun bağlamı |
-| `/api/xai/explain` | POST | `steam_id`, `game_name`, isteğe bağlı `recommendation_score` | Özellik tabanlı açıklama |
-| `/api/embeddings/similarity` | POST | `game1_name`, `game2_name` | İki oyun adının metin benzerliği |
+| `/` | GET | — | Web interface |
+| `/api/analyze` | POST | `steam_input`, optional `use_agentic` | Profile and library analysis |
+| `/api/agentic/recommend` | POST | `steam_id` | Recommendation service |
+| `/api/health` | GET | — | Agent, tool and database status |
+| `/api/db/stats` | GET | — | Cache statistics |
+| `/api/matchmaking` | POST | `steam_id` | Player matchmaking |
+| `/api/rag/context` | POST | `steam_id`, optional `max_context` | Similar-game context |
+| `/api/xai/explain` | POST | `steam_id`, `game_name`, optional `recommendation_score` | Feature-based explanation |
+| `/api/embeddings/similarity` | POST | `game1_name`, `game2_name` | Text similarity between two game names |
 
-`use_agentic` varsayılan olarak `true`; `max_context` varsayılan `15` ve `1–50` aralığına sınırlandırılır. `recommendation_score` varsayılan `0.7`.
+`use_agentic` defaults to `true`; `max_context` defaults to `15` and is clamped to `1–50`. `recommendation_score` defaults to `0.7`.
 
-`/api/agentic/recommend` mevcut kodda `max_recommendations` ve `include_matchmaking` alanlarını okumaz. Matchmaking için ayrı uç noktayı kullan.
+In the current code, `/api/agentic/recommend` does not read the `max_recommendations` and `include_matchmaking` fields. Use the separate endpoint for matchmaking.
 
-### PowerShell örnekleri
+### PowerShell examples
 
-Sağlık kontrolü:
+Health check:
 
 ```powershell
 Invoke-RestMethod -Uri 'http://localhost:5000/api/health'
 ```
 
-Profil analizi:
+Profile analysis:
 
 ```powershell
 $payload = @{ steam_input = 'YOUR_STEAM_ID64'; use_agentic = $true } | ConvertTo-Json
 Invoke-RestMethod -Uri 'http://localhost:5000/api/analyze' -Method Post -ContentType 'application/json' -Body $payload
 ```
 
-Oyuncu eşleştirme:
+Matchmaking:
 
 ```powershell
 $payload = @{ steam_id = 'YOUR_STEAM_ID64' } | ConvertTo-Json
 Invoke-RestMethod -Uri 'http://localhost:5000/api/matchmaking' -Method Post -ContentType 'application/json' -Body $payload
 ```
 
-### Bash/cURL örnekleri
+### Bash/cURL examples
 
 ```bash
 curl http://localhost:5000/api/health
@@ -236,48 +236,48 @@ curl -X POST http://localhost:5000/api/embeddings/similarity \
   -d '{"game1_name":"Dark Souls 3","game2_name":"Elden Ring"}'
 ```
 
-Örneklerdeki `YOUR_STEAM_ID64` değerini kendi ID'nle değiştir. Başarılı profil analizi `success`, `player`, `stats`, `top_games`, `library` ve `analysis` alanlarını döndürür. Sağlık uç noktası `status`, `agents_registered`, `tools_registered` ve `database` alanlarını içerir.
+Replace `YOUR_STEAM_ID64` in the examples with your own ID. A successful profile analysis returns the `success`, `player`, `stats`, `top_games`, `library` and `analysis` fields. The health endpoint includes the `status`, `agents_registered`, `tools_registered` and `database` fields.
 
-Eksik veya çözümlenemeyen profil girdileri genellikle HTTP `400`; beklenmeyen sunucu hataları `500` döndürür. Hata yanıtlarında `success: false` ve `error` bulunur. `/api/health` sonucunun başarılı olması, canlı Steam/Groq çağrılarının veya tüm AI bileşenlerinin başarıyla çalıştığını tek başına kanıtlamaz.
+Missing or unresolvable profile input usually returns HTTP `400`; unexpected server errors return `500`. Error responses contain `success: false` and `error`. A successful `/api/health` result does not by itself prove that live Steam/Groq calls or all AI components work.
 
-## Proje yapısı
+## Project structure
 
 ```text
 steam-agentai/
-├── app.py                   # Flask ve API uç noktaları
-├── config.py                # Ortam ve model ayarları
-├── init_app.py              # Ajan/araç kaydı
-├── orchestrator.py          # Ajan koordinasyon altyapısı
-├── agents/                  # Profil, retrieval, ranker, matchmaking
-├── core/                    # Embedding, vektör arama, açıklama
-├── services/                # Steam, Groq, RAG ve öneri servisleri
-├── schemas/                 # Pydantic veri modelleri
-├── tools/                   # Steam araçları ve şemaları
-├── database/                # SQLite ve dosya saklama kodu
-├── templates/               # Web arayüzü
-├── backups/                 # Önceki arayüz yedeği
-├── docs/                    # Önceki README
-├── tests/                   # Bağımsız SQLite testleri
+├── app.py                   # Flask and API endpoints
+├── config.py                # Environment and model settings
+├── init_app.py              # Agent/tool registration
+├── orchestrator.py          # Agent coordination infrastructure
+├── agents/                  # Profile, retrieval, ranker, matchmaking
+├── core/                    # Embedding, vector search, explanation
+├── services/                # Steam, Groq, RAG and recommendation services
+├── schemas/                 # Pydantic data models
+├── tools/                   # Steam tools and schemas
+├── database/                # SQLite and file storage code
+├── templates/               # Web interface
+├── backups/                 # Backup of the previous interface
+├── docs/                    # Previous README
+├── tests/                   # Standalone SQLite tests
 ├── .github/workflows/       # GitHub Actions
-├── .env.example             # Anahtarsız ortam şablonu
-├── requirements.txt         # Sabitlenmiş bağımlılıklar
-└── LICENSE                  # MIT lisansı
+├── .env.example             # Environment template without keys
+├── requirements.txt         # Pinned dependencies
+└── LICENSE                  # MIT license
 ```
 
-## Veri ve gizlilik
+## Data and privacy
 
-- `.env`, `.venv/`, `venv/`, Python önbelleği ve kişisel editör ayarları Git tarafından yok sayılır.
-- `database/matchmaking_cache.db` kullanıcı önbelleğidir; depoya yüklenmez. Şeması ilk kullanımda oluşturulur.
-- `data/` dosya tabanlı çalışma verileridir; depoya yüklenmez.
-- SQLite önbelleği oynanmamış oyunları ayıklar ve oyuncu başına en çok oynanan 50 oyunu saklar.
-- Yeni klonda hazır oyuncu havuzu bulunmaz; eşleştirme sonuçları görünür profillere ve keşfedilen oyunculara bağlıdır.
-- Profil adı ve oynanan oyunlar gibi veriler AI analizi için Groq'a gönderilebilir. Profil sorguları uygulama terminalinde de görünebilir.
+- `.env`, `.venv/`, `venv/`, Python caches and personal editor settings are ignored by Git.
+- `database/matchmaking_cache.db` is the user cache and is not committed. Its schema is created on first use.
+- `data/` holds file-based runtime data and is not committed.
+- The SQLite cache drops unplayed games and stores the 50 most-played games per player.
+- A fresh clone has no ready-made player pool; matchmaking results depend on visible profiles and discovered players.
+- Data such as the profile name and played games may be sent to Groq for AI analysis. Profile lookups may also appear in the application terminal.
 
-Kullanılan üçüncü taraf hizmetlerin koşullarını ve veri işleme politikalarını incele. Güvenilmeyen kaynaklardan gelen kayıtlı vektör indekslerini yükleme; indeks saklama kodu pickle kullanır.
+Review the terms and data processing policies of the third-party services used. Do not load saved vector indexes from untrusted sources; the index storage code uses pickle.
 
-## Testler
+## Tests
 
-Python 3.10 ile, depo kökünde:
+With Python 3.10, from the repository root:
 
 ```bash
 python -m compileall -q app.py config.py init_app.py orchestrator.py agents core database schemas services tools
@@ -285,66 +285,66 @@ python -m pip install -r requirements-test.txt
 python -m unittest discover -s tests -v
 ```
 
-Kontroller `requirements-test.txt` paketlerini kullanır; API anahtarı gerekmez. Tam model paketleri yoksa hash embedding/NumPy alternatifleriyle çalışırlar. Yerel model paketleri kuruluysa modelin ilk yüklenmesi internet gerektirebilir; önceden indirilmiş model için `HF_HUB_OFFLINE=1` kullanılabilir. Sanal ortamı etkinleştirmediysen `python` yerine platformuna uygun `.venv` Python yolunu kullan.
+The checks use the packages in `requirements-test.txt` and need no API key. If the full model packages are missing, they run with hash embedding/NumPy fallbacks. If local model packages are installed, the first model load may need internet access; set `HF_HUB_OFFLINE=1` for a model that is already downloaded. If you haven't activated the virtual environment, use the `.venv` Python path for your platform instead of `python`.
 
-| Kontrol | Kapsam |
+| Check | Scope |
 | --- | --- |
-| Sözdizimi | Python kaynaklarının derlenebilmesi |
-| Veritabanı testi | Boş SQLite şeması, kalıcı kayıt, güncelleme ve tekil kullanıcı kaydı |
-| API ve RAG testleri | Geçersiz girdi, fallback ayrımı ve profil kütüphanelerinin birbirinden ayrılması |
-| Önbellek testi | Oynanmamış oyunların elenmesi, en fazla 50 oyun ve süreye göre sıralama |
+| Syntax | Python sources compile |
+| Database test | Empty SQLite schema, persistent records, updates and unique user records |
+| API and RAG tests | Invalid input, fallback detection and keeping profile libraries separate |
+| Cache test | Dropping unplayed games, a 50-game limit and sorting by playtime |
 
-[GitHub Actions](https://github.com/symNistaken/steam-agentai/actions) bu kontrolleri push ve pull request olaylarında çalıştırır. Başarılı CI, canlı API entegrasyonu, bağımlılıkların tüm platformlarda kurulması veya model yükleme testi anlamına gelmez.
+[GitHub Actions](https://github.com/symNistaken/steam-agentai/actions) runs these checks on push and pull request events. Passing CI does not mean live API integration, dependency installation on every platform or model loading has been tested.
 
-## Sorun giderme
+## Troubleshooting
 
-| Sorun | Kontrol |
+| Problem | What to check |
 | --- | --- |
-| `ModuleNotFoundError` | Paketleri uygulamayı çalıştırdığın sanal ortamın Python'u ile kur. |
-| Bağımlılık kurulumu başarısız | Python 3.10 ve güncel pip kullan; hata mesajındaki paket/sürüm uyumunu kontrol et. |
-| Profil veya oyunlar bulunamadı | Steam ID'yi ve profil/oyun ayrıntılarının görünürlüğünü kontrol et. |
-| Groq isteği başarısız | Anahtarı, model erişimini, kotayı ve servis durumunu kontrol et. |
-| İlk işlem yavaş | Embedding modeli indiriliyor/yükleniyor olabilir; terminal çıktısına bak. |
-| Eşleştirme sonucu yok | Oyuncu önbelleği boş veya arkadaş ağı erişilemez olabilir. |
-| Port 5000 kullanımda | Diğer uygulamayı kapat veya `config.py` içindeki portu değiştir. |
-| Ortam ayarı değişti ama etkisiz | Flask uygulamasını durdurup yeniden başlat. |
+| `ModuleNotFoundError` | Install packages with the Python of the virtual environment you run the app with. |
+| Dependency installation fails | Use Python 3.10 and an up-to-date pip; check the package/version compatibility in the error message. |
+| Profile or games not found | Check the Steam ID and the visibility of profile/game details. |
+| Groq request fails | Check the key, model access, quota and service status. |
+| First run is slow | The embedding model may be downloading/loading; check the terminal output. |
+| No matchmaking results | The player cache may be empty or the friend network may be unreachable. |
+| Port 5000 is in use | Close the other application or change the port in `config.py`. |
+| Changed an environment setting but nothing happened | Stop and restart the Flask application. |
 
-SentenceTransformers paketi bulunmadığında kod yerel hashing embedding alternatifini kullanabilir. Bu alternatifin sonuçları öğrenilmiş modelin semantik kalitesiyle aynı değildir. Paket kurulu olup model yükleme başarısız olduğunda otomatik alternatif kullanım garantisi yoktur.
+When the SentenceTransformers package is missing, the code can use a local hashing embedding fallback. Its results do not match the semantic quality of a trained model. If the package is installed but model loading fails, an automatic fallback is not guaranteed.
 
-## Mevcut sınırlar
+## Current limitations
 
-- Yerel geliştirme uygulamasıdır; üretim dağıtımı ve uçtan uca doğrulama tamamlanmış kabul edilmez.
-- API kimlik doğrulaması ve istek sınırı eklenmeden internete açılmamalıdır. Üretim için uygun WSGI sunucusu ve HTTPS gerekir.
-- Groq modeli ve sabit paket sürümleri zamanla güncelleme gerektirebilir.
-- RAG uç noktası her istek için ayrı indeks oluşturur ve oyuncunun ilk 50 oyununu kullanır; tüm Steam kataloğu hazır değildir.
-- Oyun adı benzerliği gerçek oynanış benzerliğinin garantisi değildir.
-- XAI uç noktası bazı oyun özelliklerini varsayılan değerlerle oluşturur; açıklamalar doğrulanmış nedensel model açıklaması değildir.
+- This is a local development application; production deployment and end-to-end verification are not considered complete.
+- It should not be exposed to the internet without API authentication and rate limiting. Production use needs a proper WSGI server and HTTPS.
+- The Groq model and pinned package versions may need updates over time.
+- The RAG endpoint builds a separate index for each request and uses the player's top 50 games; the full Steam catalog is not available.
+- Game name similarity does not guarantee actual gameplay similarity.
+- The XAI endpoint fills some game features with default values; its explanations are not verified causal model explanations.
 
-## Katkıda bulunma
+## Contributing
 
-Hataları veya önerileri [Issues](https://github.com/symNistaken/steam-agentai/issues) üzerinden paylaşabilirsin.
+You can report bugs or suggestions through [Issues](https://github.com/symNistaken/steam-agentai/issues).
 
-1. Depoyu fork et ve değişikliğin için bir dal oluştur.
-2. Değişikliği ilgili bileşende yap; davranış değişiyorsa uygun kontrol ekle.
-3. Yukarıdaki sözdizimi ve veritabanı kontrollerini çalıştır.
-4. Ne değiştiğini ve nasıl doğruladığını açıklayan pull request aç.
+1. Fork the repository and create a branch for your change.
+2. Make the change in the relevant component; add a suitable check if behavior changes.
+3. Run the syntax and database checks above.
+4. Open a pull request explaining what changed and how you verified it.
 
-API anahtarlarını, kullanıcı veritabanını veya kişisel verileri hata raporlarına ekleme.
+Do not include API keys, the user database or personal data in bug reports.
 
-### Diğer belgeler
+### Other documents
 
-- [Proje özeti](PROJECT_SUMMARY.md)
-- [Sunum notları](SUNUM_NOTLARI.md)
-- [Önceki README](docs/README-original.md)
+- [Project summary](PROJECT_SUMMARY.md) (Turkish)
+- [Presentation notes](SUNUM_NOTLARI.md) (Turkish)
+- [Previous README](docs/README-original.md) (Turkish)
 
-Bu belgeler geçmiş geliştirme notlarını korur. Eski performans değerleri, test başarıları ve üretime hazır olma ifadeleri yeniden doğrulanmış değildir. Önceki README'de geçen `test_suite.py` ve `TEST_DOCUMENTATION.md` kaynak klasörde bulunmaz. Güncel kurulum ve davranış için bu README'yi esas al.
+These documents keep past development notes. Old performance figures, test results and production-readiness claims have not been re-verified. The `test_suite.py` and `TEST_DOCUMENTATION.md` files mentioned in the previous README are not in the source folder. Use this README as the reference for current setup and behavior.
 
-## Lisans
+## License
 
-Bu proje **[MIT Lisansı](LICENSE)** ile yayımlanır. Ticari kullanım, değiştirme ve dağıtım serbesttir; telif bildirimi ve lisans metni korunmalıdır. Yazılım garanti olmadan sunulur.
+This project is released under the **[MIT License](LICENSE)**. Commercial use, modification and distribution are allowed; the copyright notice and license text must be kept. The software is provided without warranty.
 
-Copyright (c) 2026 Berkay Seyman. Üçüncü taraf paketlerin, modellerin, Steam varlıklarının ve servislerin kendi lisansları ve koşulları ayrıca geçerlidir.
+Copyright (c) 2026 Berkay Seyman. Third-party packages, models, Steam assets and services are subject to their own licenses and terms.
 
-## Son doğrulama
+## Last verification
 
-14 Ekim 2026 tarihinde gerçek Steam API, Groq öneri çağrısı, SentenceTransformer/FAISS yüklemesi, embedding benzerliği ve açıklama uç noktası çalıştırıldı. Deneme profilinin kütüphanesi gizli olduğundan canlı RAG isteği beklenen `400` sonucunu verdi; RAG indeksleme ve profil ayrımı örnek kütüphanelerle otomatik test edildi. CI canlı API çağrısı yapmaz. Bu kontrol farklı hesap, kota ve gelecekteki model erişimi için garanti değildir.
+On 14 October 2026, the real Steam API, a Groq recommendation call, SentenceTransformer/FAISS loading, embedding similarity and the explanation endpoint were run. Because the test profile's library was private, the live RAG request returned the expected `400`; RAG indexing and profile separation were tested automatically with sample libraries. CI does not make live API calls. This check is not a guarantee for other accounts, quotas or future model access.
